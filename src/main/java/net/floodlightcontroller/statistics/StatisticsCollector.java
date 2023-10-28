@@ -91,7 +91,7 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 					OFPortStatsReply psr = (OFPortStatsReply) r;
 					for (OFPortStatsEntry pse : psr.getEntries()) {
 						NodePortTuple npt = new NodePortTuple(e.getKey(), pse.getPortNo());
-						SwitchPortBandwidth spb;
+						SwitchPortBandwidth spb = null;
 						if (portStats.containsKey(npt) || tentativePortStats.containsKey(npt)) {
 							if (portStats.containsKey(npt)) { /* update */
 								spb = portStats.get(npt);
@@ -130,6 +130,23 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 						} else { /* initialize */
 							tentativePortStats.put(npt, SwitchPortBandwidth.of(npt.getNodeId(), npt.getPortId(), U64.ZERO, U64.ZERO, pse.getRxBytes(), pse.getTxBytes()));
 						}
+
+
+						if (spb != null) {
+
+
+							long txBandwidth = spb.getBitsPerSecondTx().getValue();
+							long rxBandwidth = spb.getBitsPerSecondRx().getValue();
+
+							if (txBandwidth > 1000000) {
+								log.info("Se ha superado el umbral de transmisión en el puerto {}. TX: {} bps", npt, txBandwidth);
+							}
+
+							if (rxBandwidth > 1000000) {
+								log.info("Se ha superado el umbral de recepción en el puerto {}. RX: {} bps", npt, rxBandwidth);
+							}
+						}
+
 					}
 				}
 			}
@@ -222,7 +239,11 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 				log.error("Could not parse '{}'. Using default of {}", INTERVAL_PORT_STATS_STR, portStatsInterval);
 			}
 		}
+
 		log.info("Port statistics collection interval set to {}s", portStatsInterval);
+
+		long portTxThreshold = 1000000;
+		long portRxThreshold = 1000000;
 	}
 
 	@Override
